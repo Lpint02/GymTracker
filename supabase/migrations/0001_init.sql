@@ -281,6 +281,40 @@ create policy own_delete on public.routine_favorite_items
 
 
 -- ============================================================================
+-- GRANT a livello di tabella
+--
+-- La RLS da sola NON basta, ed è un errore facile da fare: PostgreSQL controlla
+-- i privilegi di tabella PRIMA delle policy RLS. Senza questi grant ogni
+-- richiesta muore con `42501 permission denied for table` e la RLS non viene
+-- mai nemmeno consultata — anche per un utente perfettamente autenticato.
+--
+-- Sono esplicitati qui invece di affidarsi ai default privilege del progetto
+-- Supabase: quei default sono cambiati fra le versioni di Supabase e non sono
+-- una cosa su cui uno schema dovrebbe scommettere in silenzio.
+--
+-- `anon` non riceve NULLA di proposito: il requisito è nessun accesso senza
+-- account, quindi una richiesta senza JWT utente non deve poter toccare queste
+-- tabelle nemmeno per provarci.
+-- ============================================================================
+
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on public.workout_sessions       to authenticated;
+grant select, insert, update, delete on public.workout_exercises      to authenticated;
+grant select, insert, update, delete on public.workout_sets           to authenticated;
+grant select, insert, update, delete on public.exercise_favorites     to authenticated;
+grant select, insert, update, delete on public.routine_favorites      to authenticated;
+grant select, insert, update, delete on public.routine_favorite_items to authenticated;
+
+revoke all on public.workout_sessions       from anon;
+revoke all on public.workout_exercises      from anon;
+revoke all on public.workout_sets           from anon;
+revoke all on public.exercise_favorites     from anon;
+revoke all on public.routine_favorites      from anon;
+revoke all on public.routine_favorite_items from anon;
+
+
+-- ============================================================================
 -- RPC
 --
 -- Entrambe SECURITY INVOKER (il default esplicitato): girano con i permessi del
@@ -488,12 +522,27 @@ grant execute on function public.export_user_data()        to authenticated;
 
 -- ============================================================================
 -- Verifica di accettazione — eseguire a mano dopo la migrazione.
--- Il vincolo "RLS su ogni tabella, nessuna eccezione" va CONTROLLATO, non assunto.
+-- Questo file è interamente ri-eseguibile: si può rilanciare senza ripulire.
+--
+-- 1) RLS attiva ovunque. Il vincolo "nessuna eccezione" va CONTROLLATO, non
+--    assunto: `enable` è un'istruzione separata dallo scrivere le policy, e una
+--    tabella con policy ma senza `enable` è leggibile con la anon key pubblica.
 --
 --   select tablename from pg_tables
 --   where schemaname = 'public' and rowsecurity = false;
 --   -- deve restituire zero righe
 --
--- E, con due utenti di prova, verificare che il secondo non veda nulla del primo:
+-- 2) I grant esistono. La RLS da sola non basta — senza privilegi di tabella
+--    ogni richiesta muore con 42501 prima ancora di arrivare alle policy.
+--
+--   select table_name, grantee, string_agg(privilege_type, ',' order by privilege_type)
+--   from information_schema.role_table_grants
+--   where table_schema = 'public' and grantee in ('anon', 'authenticated')
+--   group by table_name, grantee order by table_name, grantee;
+--   -- atteso: 6 righe, tutte grantee = authenticated, nessuna con anon
+--
+-- 3) Isolamento fra utenti: con due utenti di prova, il secondo non deve vedere
+--    nulla del primo.
+--
 --   select count(*) from public.workout_sessions;   -- 0 per l'altro utente
 -- ============================================================================
