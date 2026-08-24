@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dumbbell, Calendar, X, Play, Star } from "lucide-react";
-import { getTodayISO } from "../../lib/utils";
+import { getTodayISO, normalizeKey } from "../../lib/utils";
 import { useFavorites } from "../../context/WorkoutContext";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -114,8 +114,7 @@ export default function SetupSessionModal({
                       <span
                         key={fav.id}
                         className={`group flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg border transition-all ${
-                          muscleGroups.trim().toLowerCase() ===
-                          fav.label.toLowerCase()
+                          normalizeKey(muscleGroups) === normalizeKey(fav.label)
                             ? "bg-primary text-on-primary border-primary"
                             : "bg-background text-muted-foreground border-border hover:text-foreground"
                         }`}

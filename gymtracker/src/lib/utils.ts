@@ -44,6 +44,54 @@ export const generateId = (): string => {
 };
 
 /**
+ * Grouping key for a free-text name (exercise, muscle group, routine).
+ *
+ * Names are free text by design — there is no enum of exercises — so "Panca
+ * Piana", "panca piana" and " Panca Piana " all have to count as the same
+ * exercise when computing PRs, progress and favorites. This is that rule.
+ *
+ * It pairs with `displayLabel`: group by the KEY, show the LABEL. Mixing the
+ * two up is how a PR badge silently disappears, because a map keyed by one
+ * gets looked up with the other.
+ *
+ * The database enforces the same rule independently, via the generated
+ * `label_key`/`name_key` columns on the favorites tables.
+ */
+export const normalizeKey = (name: string): string =>
+  name.trim().toLowerCase();
+
+/**
+ * The form of a name that is shown to the user: trimmed, original casing kept.
+ *
+ * Casing is never corrected automatically — the user's own spelling of an
+ * exercise is theirs to keep.
+ */
+export const displayLabel = (name: string): string => name.trim();
+
+/**
+ * Look a value up in a map keyed by display label, using any casing of the name.
+ *
+ * Needed because the two conventions coexist by design: `sessionPRs` is keyed
+ * by normalized key (a consumer only has that session's own casing on hand),
+ * while `currentPRsByExercise` is keyed by the canonical label (the casing of
+ * the exercise's first-ever occurrence). A consumer holding "panca piana"
+ * cannot index the second one directly.
+ */
+export const findByName = <T>(
+  byLabel: Record<string, T>,
+  name: string
+): T | undefined => {
+  const direct = byLabel[displayLabel(name)];
+  if (direct !== undefined) return direct;
+
+  const key = normalizeKey(name);
+  for (const label of Object.keys(byLabel)) {
+    if (normalizeKey(label) === key) return byLabel[label];
+  }
+  return undefined;
+};
+
+/**
  * Return today's date in ISO format (YYYY-MM-DD).
  */
 export const getTodayISO = (): string => {

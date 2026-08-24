@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { WorkoutSession } from "../types";
+import { normalizeKey, displayLabel } from "../lib/utils";
 
 export interface ExerciseProgressPoint {
   sessionId: string;
@@ -25,7 +26,7 @@ export function useExerciseProgress(history: WorkoutSession[]) {
       const session = history[i];
 
       for (const exercise of session.exercises) {
-        const key = exercise.name.trim().toLowerCase();
+        const key = normalizeKey(exercise.name);
         if (!key) continue;
 
         let best: { weight: number; reps: number } | null = null;
@@ -44,7 +45,7 @@ export function useExerciseProgress(history: WorkoutSession[]) {
         if (!best) continue;
 
         if (!byExercise[key]) {
-          byExercise[key] = { label: exercise.name.trim(), points: [] };
+          byExercise[key] = { label: displayLabel(exercise.name), points: [] };
         }
         byExercise[key].points.push({
           sessionId: session.id,

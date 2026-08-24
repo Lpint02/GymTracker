@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { WorkoutSession } from "../types";
 import { ExerciseProgressPoint } from "./useExerciseProgress";
+import { normalizeKey } from "../lib/utils";
 
 export interface SessionPRFlags {
   maxWeightPR: boolean;
@@ -55,12 +56,12 @@ export function useExercisePRs(
     // own casing convention so both categories share one label per exercise
     const keyToLabel: Record<string, string> = {};
     for (const label of Object.keys(progressByExercise)) {
-      keyToLabel[label.trim().toLowerCase()] = label;
+      keyToLabel[normalizeKey(label)] = label;
     }
 
     // ── Category (a): max weight — reuses useExerciseProgress's data ──
     for (const [label, points] of Object.entries(progressByExercise)) {
-      const key = label.trim().toLowerCase();
+      const key = normalizeKey(label);
       let best: { weight: number; date: string; sessionId: string } | null =
         null;
       for (const point of points) {
@@ -91,7 +92,7 @@ export function useExercisePRs(
     for (let i = history.length - 1; i >= 0; i--) {
       const session = history[i];
       for (const exercise of session.exercises) {
-        const key = exercise.name.trim().toLowerCase();
+        const key = normalizeKey(exercise.name);
         const label = keyToLabel[key];
         if (!label) continue; // no valid weight ever logged for this exercise
 

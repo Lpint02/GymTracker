@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Favorite } from "../types";
-import { generateId } from "../lib/utils";
+import { generateId, normalizeKey, displayLabel } from "../lib/utils";
 import type { FavoriteKind, FavoriteRecord } from "../lib/db";
 import {
   getFavoritesByKind,
@@ -48,20 +48,20 @@ export function useFavoritesList(kind: FavoriteKind) {
 
   const isFavorite = useCallback(
     (label: string) => {
-      const trimmed = label.trim().toLowerCase();
-      if (!trimmed) return false;
-      return favorites.some((f) => f.label.trim().toLowerCase() === trimmed);
+      const key = normalizeKey(label);
+      if (!key) return false;
+      return favorites.some((f) => normalizeKey(f.label) === key);
     },
     [favorites]
   );
 
   const toggleFavorite = useCallback(
     (label: string) => {
-      const trimmed = label.trim();
+      const trimmed = displayLabel(label);
       if (!trimmed) return;
 
       const existing = favorites.find(
-        (f) => f.label.trim().toLowerCase() === trimmed.toLowerCase()
+        (f) => normalizeKey(f.label) === normalizeKey(trimmed)
       );
 
       if (existing) {

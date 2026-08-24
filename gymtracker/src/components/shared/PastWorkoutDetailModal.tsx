@@ -1,6 +1,11 @@
 import { X, Calendar, Dumbbell, Award, Trophy } from "lucide-react";
 import { WorkoutSession } from "../../types";
-import { formatDateItalian, daysSince } from "../../lib/utils";
+import {
+    formatDateItalian,
+    daysSince,
+    normalizeKey,
+    findByName,
+} from "../../lib/utils";
 import { usePRs } from "../../context/WorkoutContext";
 import { motion } from "motion/react";
 
@@ -38,7 +43,7 @@ export default function PastWorkoutDetailModal({
     });
     const peakIsPR =
         maxWeightEx !== "" &&
-        !!sessionPRFlags?.[maxWeightEx.trim().toLowerCase()]?.maxWeightPR;
+        !!sessionPRFlags?.[normalizeKey(maxWeightEx)]?.maxWeightPR;
 
     return (
         <div
@@ -119,9 +124,18 @@ export default function PastWorkoutDetailModal({
                         </div>
                     ) : (
                         workout.exercises.map((exercise, exIndex) => {
-                            const exKey = exercise.name.trim().toLowerCase();
-                            const exFlags = sessionPRFlags?.[exKey];
-                            const currentPR = currentPRsByExercise[exercise.name.trim()]?.maxWeight;
+                            const exFlags = sessionPRFlags?.[normalizeKey(exercise.name)];
+                            // currentPRsByExercise is keyed by the CANONICAL
+                            // label — the casing of this exercise's first-ever
+                            // occurrence — while this session only knows its
+                            // own casing. Indexing it directly meant a session
+                            // logged as "panca piana" found nothing when the
+                            // canonical label was "Panca Piana", and the PR
+                            // reference silently vanished.
+                            const currentPR = findByName(
+                                currentPRsByExercise,
+                                exercise.name
+                            )?.maxWeight;
                             return (
                             <div
                                 key={exercise.id}

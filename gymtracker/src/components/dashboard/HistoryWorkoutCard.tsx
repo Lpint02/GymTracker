@@ -1,6 +1,6 @@
 import { Calendar, ChevronRight, Trash2, Trophy } from "lucide-react";
 import { WorkoutSession } from "../../types";
-import { formatDateItalian } from "../../lib/utils";
+import { formatDateItalian, normalizeKey } from "../../lib/utils";
 import { usePRs } from "../../context/WorkoutContext";
 import { motion } from "motion/react";
 
@@ -83,7 +83,7 @@ export default function HistoryWorkoutCard({
       {/* Snippet of exercises */}
       <div className="flex flex-wrap gap-1">
         {session.exercises.slice(0, 3).map((ex) => {
-          const flags = sessionPRFlags?.[ex.name.trim().toLowerCase()];
+          const flags = sessionPRFlags?.[normalizeKey(ex.name)];
           const isPR = flags?.maxWeightPR || flags?.bestSetPR;
           return (
             <span

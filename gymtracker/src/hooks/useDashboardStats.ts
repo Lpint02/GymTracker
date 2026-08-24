@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { WorkoutSession } from "../types";
-import { formatDateItalian } from "../lib/utils";
+import { formatDateItalian, normalizeKey, displayLabel } from "../lib/utils";
 
 /**
  * Hook that derives dashboard statistics from workout history.
@@ -19,7 +19,7 @@ export function useDashboardStats(history: WorkoutSession[]) {
     if (history.length > 0) {
       const counts: Record<string, number> = {};
       history.forEach((session) => {
-        const mg = session.muscleGroups.trim().toLowerCase();
+        const mg = normalizeKey(session.muscleGroups);
         if (mg) {
           counts[mg] = (counts[mg] || 0) + 1;
         }
@@ -29,12 +29,14 @@ export function useDashboardStats(history: WorkoutSession[]) {
       Object.entries(counts).forEach(([mg, count]) => {
         if (count > maxCount) {
           maxCount = count;
-          // Preserve original casing from the first match
-          const original =
-            history.find(
-              (h) => h.muscleGroups.trim().toLowerCase() === mg
-            )?.muscleGroups || mg;
-          popularMuscleGroup = original;
+          // Preserve the user's own casing rather than showing the lowercased
+          // grouping key. Trimmed on the way out: the raw value was displayed
+          // untrimmed here, so a group saved as " Petto " rendered with its
+          // padding intact.
+          const match = history.find(
+            (h) => normalizeKey(h.muscleGroups) === mg
+          )?.muscleGroups;
+          popularMuscleGroup = match ? displayLabel(match) : mg;
         }
       });
     }
