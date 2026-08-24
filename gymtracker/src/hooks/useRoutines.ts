@@ -65,9 +65,9 @@ export function useRoutines() {
    * unique-violation.
    */
   const saveRoutine = useCallback(
-    (name: string, exerciseNames: string[] = []) => {
+    (name: string, exerciseNames: string[] = []): RoutineRecord | null => {
       const label = displayLabel(name);
-      if (!label) return;
+      if (!label) return null;
 
       const existing = findByName(label);
       const now = new Date().toISOString();
@@ -94,6 +94,11 @@ export function useRoutines() {
         .catch((error) =>
           reportStorageError(`salvataggio della routine ${record.id}`, error)
         );
+
+      // Returned so the caller can keep tracking which routine the list on
+      // screen belongs to, including for a routine that did not exist a moment
+      // ago.
+      return record;
     },
     [findByName, routines.length]
   );
@@ -116,10 +121,13 @@ export function useRoutines() {
    * away is worse than an argument the caller has to think about.
    */
   const toggleRoutine = useCallback(
-    (name: string, exerciseNames: string[]) => {
+    (name: string, exerciseNames: string[]): RoutineRecord | null => {
       const existing = findByName(name);
-      if (existing) removeRoutine(existing.id);
-      else saveRoutine(name, exerciseNames);
+      if (existing) {
+        removeRoutine(existing.id);
+        return null;
+      }
+      return saveRoutine(name, exerciseNames);
     },
     [findByName, removeRoutine, saveRoutine]
   );

@@ -66,11 +66,46 @@ function SetupSessionForm({
   const [plannedExercises, setPlannedExercises] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [draftExercise, setDraftExercise] = useState("");
+  /**
+   * Which routine the planned list came from, if it came from one at all.
+   *
+   * Needed to tell "these exercises belong to the routine currently named in
+   * the field" apart from "the user is composing a list by hand". The two have
+   * to behave differently when the name changes.
+   */
+  const [loadedRoutineId, setLoadedRoutineId] = useState<string | null>(null);
 
-  const selectRoutine = (name: string) => {
-    setMuscleGroups(name);
-    setPlannedExercises(findByName(name)?.exerciseNames ?? []);
+  const selectRoutine = (routine: { id: string; name: string; exerciseNames: string[] }) => {
+    setMuscleGroups(routine.name);
+    setPlannedExercises(routine.exerciseNames);
+    setLoadedRoutineId(routine.id);
     setIsEditing(false);
+  };
+
+  /**
+   * The planned list belongs to the name in the field, and has to follow it.
+   *
+   * Without this, selecting a routine and then typing a different name left the
+   * previous routine's exercises on screen — and saving attached them to the
+   * new name. A hand-built list (no source routine) is left alone, since
+   * naming something you just composed is a normal thing to do.
+   */
+  const handleNameChange = (next: string) => {
+    setMuscleGroups(next);
+
+    if (!loadedRoutineId) return;
+
+    const match = findByName(next);
+    if (match?.id === loadedRoutineId) return;
+
+    if (match) {
+      setPlannedExercises(match.exerciseNames);
+      setLoadedRoutineId(match.id);
+    } else {
+      setPlannedExercises([]);
+      setLoadedRoutineId(null);
+      setIsEditing(false);
+    }
   };
 
   /**
@@ -112,7 +147,9 @@ function SetupSessionForm({
   };
 
   const saveAsRoutine = () => {
-    saveRoutine(muscleGroups, commitDraft());
+    const saved = saveRoutine(muscleGroups, commitDraft());
+    // The list now belongs to this routine, so a later rename knows to follow.
+    if (saved) setLoadedRoutineId(saved.id);
     setIsEditing(false);
   };
 
@@ -161,7 +198,7 @@ function SetupSessionForm({
                     type="text"
                     placeholder="es. Petto & Bicipiti, Dorso, Spalle..."
                     value={muscleGroups}
-                    onChange={(e) => setMuscleGroups(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     autoComplete="off"
                     autoFocus
                     className="w-full pl-3.5 pr-11 py-3 bg-background border border-border rounded-xl text-sm font-semibold text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary transition-all"
@@ -170,7 +207,11 @@ function SetupSessionForm({
                     type="button"
                     // Passes the prepared exercises: the star used to save an
                     // empty routine and drop them.
-                    onClick={() => toggleRoutine(muscleGroups, commitDraft())}
+                    onClick={() =>
+                      setLoadedRoutineId(
+                        toggleRoutine(muscleGroups, commitDraft())?.id ?? null
+                      )
+                    }
                     disabled={!trimmedName}
                     title={
                       isSaved(muscleGroups)
@@ -215,7 +256,7 @@ function SetupSessionForm({
                       >
                         <button
                           type="button"
-                          onClick={() => selectRoutine(routine.name)}
+                          onClick={() => selectRoutine(routine)}
                           className="text-xs font-bold cursor-pointer"
                         >
                           {routine.name}
