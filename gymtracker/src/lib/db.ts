@@ -200,6 +200,24 @@ export async function setMeta(key: string, value: unknown): Promise<void> {
   await db.put("syncMeta", { key, value });
 }
 
+/**
+ * How many sync operations are still waiting to reach the server.
+ *
+ * Always 0 until the sync engine lands, but the sign-out flow needs it now:
+ * wiping local data with a non-empty outbox destroys workouts that exist
+ * nowhere else, and a guard that only appears alongside the feature it guards
+ * is a guard that gets forgotten.
+ */
+export async function countPendingOperations(): Promise<number> {
+  try {
+    const db = await getDb();
+    return await db.countFromIndex("outbox", "by-status", "pending");
+  } catch {
+    // If we cannot read the queue, assume the worst rather than the best.
+    return 0;
+  }
+}
+
 // ── Wipe ─────────────────────────────────────────────────────────────────────
 
 /**

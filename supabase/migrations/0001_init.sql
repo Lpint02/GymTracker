@@ -313,6 +313,26 @@ revoke all on public.exercise_favorites     from anon;
 revoke all on public.routine_favorites      from anon;
 revoke all on public.routine_favorite_items from anon;
 
+-- I default privilege di Supabase concedono ALL a `authenticated` sulle tabelle
+-- nuove in public, il che include TRUNCATE. Va tolto:
+--
+--   TRUNCATE IGNORA COMPLETAMENTE LA RLS.
+--
+-- Non è filtrato per riga come DELETE, quindi un singolo utente autenticato
+-- potrebbe svuotare la tabella di TUTTI gli utenti. Oggi non è raggiungibile
+-- via PostgREST (che espone solo select/insert/update/delete e le RPC), ma è
+-- l'unico privilegio in quell'elenco che buca il modello di sicurezza, e non ha
+-- alcuna ragione di stare su un ruolo che rappresenta gli utenti finali.
+--
+-- REFERENCES e TRIGGER seguono per lo stesso principio: sono privilegi di DDL,
+-- non servono a un client, e i grant sopra dichiarano già tutto il necessario.
+revoke truncate, references, trigger on public.workout_sessions       from authenticated;
+revoke truncate, references, trigger on public.workout_exercises      from authenticated;
+revoke truncate, references, trigger on public.workout_sets           from authenticated;
+revoke truncate, references, trigger on public.exercise_favorites     from authenticated;
+revoke truncate, references, trigger on public.routine_favorites      from authenticated;
+revoke truncate, references, trigger on public.routine_favorite_items from authenticated;
+
 
 -- ============================================================================
 -- RPC
@@ -539,7 +559,10 @@ grant execute on function public.export_user_data()        to authenticated;
 --   from information_schema.role_table_grants
 --   where table_schema = 'public' and grantee in ('anon', 'authenticated')
 --   group by table_name, grantee order by table_name, grantee;
---   -- atteso: 6 righe, tutte grantee = authenticated, nessuna con anon
+--   -- atteso: 6 righe, tutte grantee = authenticated, nessuna con anon, e
+--   -- privs esattamente DELETE,INSERT,SELECT,UPDATE.
+--   -- Se compare TRUNCATE, i revoke qui sopra non sono stati applicati: è il
+--   -- privilegio che ignora la RLS e va tolto.
 --
 -- 3) Isolamento fra utenti: con due utenti di prova, il secondo non deve vedere
 --    nulla del primo.

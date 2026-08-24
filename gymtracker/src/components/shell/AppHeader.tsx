@@ -1,4 +1,5 @@
-import { Dumbbell, Sparkles } from "lucide-react";
+import { Dumbbell } from "lucide-react";
+import ProfileMenu from "../auth/ProfileMenu";
 
 /**
  * Shared top header — rendered above every tab in the app shell.
@@ -21,17 +22,17 @@ export default function AppHeader() {
               GymTracker
             </h1>
             <p className="text-xs text-primary font-semibold uppercase tracking-wider mt-1">
-              Registro Allenamenti Locale
+              Registro Allenamenti
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-card border border-border/80 px-3 py-2 rounded-xl">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            Sincronizzato nel Browser (LocalStorage)
-          </span>
-        </div>
+        {/* The hardcoded "Sincronizzato nel Browser (LocalStorage)" badge that
+            used to sit here was false on both counts once data moved to
+            IndexedDB behind an account. The sync-status badge that replaces it
+            properly arrives with the sync engine; until then the header shows
+            who is signed in rather than claiming something untrue. */}
+        <ProfileMenu />
       </div>
     </header>
   );
