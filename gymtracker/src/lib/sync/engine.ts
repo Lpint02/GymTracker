@@ -12,7 +12,7 @@ import {
   describeError,
   MAX_ATTEMPTS,
 } from "./errors";
-import { setSyncState } from "./syncStore";
+import { setSyncState, getSnapshot } from "./syncStore";
 import {
   favoriteTable,
   type FavoritePayload,
@@ -114,6 +114,11 @@ async function executeOperation(record: OutboxRecord): Promise<void> {
 
 // ── Draining ─────────────────────────────────────────────────────────────────
 
+/** Keeps "last synced" honest: with something parked, nothing just succeeded. */
+function snapshotLastSyncedAt(): number | null {
+  return getSnapshot().lastSyncedAt;
+}
+
 async function publishCounts(): Promise<{ pending: number; failed: number }> {
   const [pending, failed] = await Promise.all([
     countByStatus("pending"),
@@ -131,7 +136,16 @@ async function drain(): Promise<void> {
     .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
 
   if (queue.length === 0) {
-    setSyncState({ state: "idle", lastSyncedAt: Date.now() });
+    // Nothing PENDING is not the same as nothing wrong. Parked operations are
+    // skipped by the drain on purpose — retrying a permanent failure forever is
+    // how a queue stays poisoned — but they must still be reported, or a reload
+    // makes the badge read "Sincronizzato" while a workout sits unsynced. That
+    // silence is exactly what this design exists to prevent.
+    const counts = await publishCounts();
+    setSyncState({
+      state: counts.failed > 0 ? "error" : "idle",
+      lastSyncedAt: counts.failed > 0 ? snapshotLastSyncedAt() : Date.now(),
+    });
     return;
   }
 
