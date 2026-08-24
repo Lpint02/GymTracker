@@ -73,15 +73,32 @@ function SetupSessionForm({
     setIsEditing(false);
   };
 
-  const addPlannedExercise = () => {
+  /**
+   * Fold a half-typed exercise into the list and return the effective result.
+   *
+   * Every action that consumes the list goes through this, because otherwise
+   * text sitting in the field when you hit save or start is silently thrown
+   * away — you typed an exercise, it was on screen, and it just vanished.
+   * Returns the list rather than relying on state, since a setState during the
+   * same handler would not be visible yet.
+   */
+  const commitDraft = (): string[] => {
     const label = displayLabel(draftExercise);
-    if (!label) return;
-    if (plannedExercises.some((e) => normalizeKey(e) === normalizeKey(label))) {
-      setDraftExercise("");
-      return;
-    }
-    setPlannedExercises((prev) => [...prev, label]);
+    if (!label) return plannedExercises;
+
+    const isDuplicate = plannedExercises.some(
+      (e) => normalizeKey(e) === normalizeKey(label)
+    );
     setDraftExercise("");
+    if (isDuplicate) return plannedExercises;
+
+    const next = [...plannedExercises, label];
+    setPlannedExercises(next);
+    return next;
+  };
+
+  const addPlannedExercise = () => {
+    commitDraft();
   };
 
   const move = (index: number, delta: number) => {
@@ -95,7 +112,7 @@ function SetupSessionForm({
   };
 
   const saveAsRoutine = () => {
-    saveRoutine(muscleGroups, plannedExercises);
+    saveRoutine(muscleGroups, commitDraft());
     setIsEditing(false);
   };
 
@@ -151,7 +168,9 @@ function SetupSessionForm({
                   />
                   <button
                     type="button"
-                    onClick={() => toggleRoutine(muscleGroups)}
+                    // Passes the prepared exercises: the star used to save an
+                    // empty routine and drop them.
+                    onClick={() => toggleRoutine(muscleGroups, commitDraft())}
                     disabled={!trimmedName}
                     title={
                       isSaved(muscleGroups)
@@ -370,7 +389,7 @@ function SetupSessionForm({
               </button>
               <button
                 type="button"
-                onClick={() => onStart(date, muscleGroups, plannedExercises)}
+                onClick={() => onStart(date, muscleGroups, commitDraft())}
                 className="flex-1 py-3.5 bg-primary hover:bg-secondary text-on-primary font-heading font-black rounded-xl text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />

@@ -107,12 +107,19 @@ export function useRoutines() {
       );
   }, []);
 
-  /** Toggle a bare name on or off, matching the old star-on-a-pill gesture. */
+  /**
+   * Toggle a routine on or off — the star gesture.
+   *
+   * `exerciseNames` is REQUIRED rather than defaulted. It used to be optional,
+   * which meant the star saved an empty routine and silently discarded whatever
+   * the user had just prepared on screen. A default that quietly throws data
+   * away is worse than an argument the caller has to think about.
+   */
   const toggleRoutine = useCallback(
-    (name: string) => {
+    (name: string, exerciseNames: string[]) => {
       const existing = findByName(name);
       if (existing) removeRoutine(existing.id);
-      else saveRoutine(name);
+      else saveRoutine(name, exerciseNames);
     },
     [findByName, removeRoutine, saveRoutine]
   );
