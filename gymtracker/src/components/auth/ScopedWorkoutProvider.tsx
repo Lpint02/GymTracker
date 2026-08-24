@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { WorkoutProvider } from "../../context/WorkoutContext";
+import { startSyncEngine } from "../../lib/sync/engine";
 
 /**
  * Binds workout state to the signed-in account.
@@ -17,5 +18,11 @@ export default function ScopedWorkoutProvider({
   children: ReactNode;
 }) {
   const { user } = useAuth();
+
+  // Started here rather than in main.tsx so the engine only ever runs behind a
+  // signed-in session — there is no point draining a queue with no token, and
+  // every operation would come back as an auth failure.
+  useEffect(() => startSyncEngine(), []);
+
   return <WorkoutProvider key={user?.id ?? "anonymous"}>{children}</WorkoutProvider>;
 }

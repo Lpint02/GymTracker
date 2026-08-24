@@ -1,5 +1,6 @@
 import { Dumbbell } from "lucide-react";
 import ProfileMenu from "../auth/ProfileMenu";
+import SyncBadge from "./SyncBadge";
 
 /**
  * Shared top header — rendered above every tab in the app shell.
@@ -27,12 +28,10 @@ export default function AppHeader() {
           </div>
         </div>
 
-        {/* The hardcoded "Sincronizzato nel Browser (LocalStorage)" badge that
-            used to sit here was false on both counts once data moved to
-            IndexedDB behind an account. The sync-status badge that replaces it
-            properly arrives with the sync engine; until then the header shows
-            who is signed in rather than claiming something untrue. */}
-        <ProfileMenu />
+        <div className="flex items-center gap-2">
+          <SyncBadge />
+          <ProfileMenu />
+        </div>
       </div>
     </header>
   );

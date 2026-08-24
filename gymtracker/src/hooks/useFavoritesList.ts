@@ -8,6 +8,7 @@ import {
   deleteFavorite,
 } from "../lib/store/favoritesStore";
 import { reportStorageError } from "../lib/store/errors";
+import { requestFlush } from "../lib/sync/engine";
 
 /**
  * Generic hook for a named-label favorites list (workout names, exercise
@@ -65,9 +66,11 @@ export function useFavoritesList(kind: FavoriteKind) {
 
       if (existing) {
         setFavorites((prev) => prev.filter((f) => f.id !== existing.id));
-        void deleteFavorite(existing.id).catch((error) =>
-          reportStorageError(`rimozione del preferito ${existing.id}`, error)
-        );
+        void deleteFavorite(existing.id)
+          .then(() => requestFlush())
+          .catch((error) =>
+            reportStorageError(`rimozione del preferito ${existing.id}`, error)
+          );
         return;
       }
 
@@ -78,18 +81,22 @@ export function useFavoritesList(kind: FavoriteKind) {
         createdAt: new Date().toISOString(),
       };
       setFavorites((prev) => [{ id: record.id, label: record.label }, ...prev]);
-      void putFavorite(record).catch((error) =>
-        reportStorageError(`salvataggio del preferito ${record.id}`, error)
-      );
+      void putFavorite(record)
+        .then(() => requestFlush())
+        .catch((error) =>
+          reportStorageError(`salvataggio del preferito ${record.id}`, error)
+        );
     },
     [favorites, kind]
   );
 
   const removeFavorite = useCallback((id: string) => {
     setFavorites((prev) => prev.filter((f) => f.id !== id));
-    void deleteFavorite(id).catch((error) =>
-      reportStorageError(`rimozione del preferito ${id}`, error)
-    );
+    void deleteFavorite(id)
+      .then(() => requestFlush())
+      .catch((error) =>
+        reportStorageError(`rimozione del preferito ${id}`, error)
+      );
   }, []);
 
   return {

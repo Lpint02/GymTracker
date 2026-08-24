@@ -7,6 +7,7 @@ import {
 } from "../lib/store/sessionsStore";
 import { sortSessionsNewestFirst } from "../lib/store/order";
 import { reportStorageError } from "../lib/store/errors";
+import { requestFlush } from "../lib/sync/engine";
 
 /**
  * Hook that encapsulates workout history CRUD, search/filter, and persistence.
@@ -65,9 +66,14 @@ export function useWorkoutHistory() {
     // animations behave exactly as before. The durable write follows.
     setHistory((prev) => sortSessionsNewestFirst([session, ...prev]));
 
-    void putSession(session).catch((error) =>
-      reportStorageError(`salvataggio dell'allenamento ${session.id}`, error)
-    );
+    // Fire-and-forget: syncing must never gate the UI returning to the shell.
+    // This is the trigger that matters most — it is the moment the user cares
+    // whether their workout is safe.
+    void putSession(session)
+      .then(() => requestFlush())
+      .catch((error) =>
+        reportStorageError(`salvataggio dell'allenamento ${session.id}`, error)
+      );
   }, []);
 
   const deleteWorkout = useCallback(
@@ -78,9 +84,11 @@ export function useWorkoutHistory() {
       }
       setConfirmDeleteId(null);
 
-      void deleteSession(id).catch((error) =>
-        reportStorageError(`eliminazione dell'allenamento ${id}`, error)
-      );
+      void deleteSession(id)
+        .then(() => requestFlush())
+        .catch((error) =>
+          reportStorageError(`eliminazione dell'allenamento ${id}`, error)
+        );
     },
     [selectedPastWorkout]
   );
