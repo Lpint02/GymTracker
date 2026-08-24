@@ -16,7 +16,8 @@
     // `vite/client` declares the ambient modules for CSS/asset side-effect
     // imports (main.tsx imports './index.css'), plus import.meta.env — which
     // the Supabase client config will need.
-    "types": ["vite/client"],
+    // vite-plugin-pwa/react declares the `virtual:pwa-register/react` module.
+    "types": ["vite/client", "vite-plugin-pwa/react"],
 
     "noEmit": true,
     // main.tsx does `import App from './App.tsx'`. Vite resolves that fine; this

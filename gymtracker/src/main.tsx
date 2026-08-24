@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './context/AuthContext';
 import AuthGate from './components/auth/AuthGate';
 import ScopedWorkoutProvider from './components/auth/ScopedWorkoutProvider';
+import UpdatePrompt from './components/shell/UpdatePrompt';
 import { requestPersistentStorage } from './lib/db';
 import App from './App.tsx';
 import './index.css';
@@ -22,5 +23,8 @@ createRoot(document.getElementById('root')!).render(
         </ScopedWorkoutProvider>
       </AuthGate>
     </AuthProvider>
+    {/* Outside the gate: a pending update is worth offering whether the user
+        is signed in, on the login screen, or mid-workout. */}
+    <UpdatePrompt />
   </StrictMode>,
 );
