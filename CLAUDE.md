@@ -12,30 +12,39 @@ npm run build     # production build (outputs to gymtracker/dist)
 npm run preview   # preview the production build
 ```
 
-Lint (must be run from `gymtracker/`, not defined at the root):
+Lint and type-check (defined in `gymtracker/`, not at the root):
 
 ```bash
 npm --prefix gymtracker run lint
+npm --prefix gymtracker run typecheck
 ```
 
-There is no test suite and no `typecheck` script configured.
+There is no test suite.
 
 ## Architecture
 
 GymTracker is a single-page, client-only workout tracker (Italian-language UI) built with React 19 + Vite. There is no backend — all data lives in `localStorage`.
 
-**No TypeScript compiler is installed.** Source files use `.ts`/`.tsx` extensions and TS syntax (interfaces, type annotations) purely for editor/authoring ergonomics — Vite's esbuild strips types at build time without type-checking. There is no `tsconfig.json`, and ESLint (`eslint.config.js`) only lints `.js`/`.jsx`, so type errors will not be caught by `lint` or `build`.
+**Vite never type-checks.** esbuild strips types at build time, so `build` will happily emit code with type errors. Type checking is a separate, opt-in step: `tsconfig.json` is `noEmit`-only and exists purely to back `npm run typecheck`. Run it yourself — nothing runs it for you.
+
+`tsconfig.json` starts deliberately permissive (`strict: false`) because the codebase predates any checker; tighten it incrementally rather than all at once. ESLint covers `.js/.jsx` **and** `.ts/.tsx` (via `typescript-eslint`), so `react-hooks` rules apply to the real source.
 
 ### State architecture
 
-All app state flows through one context, composed from three independent hooks:
+All app state flows through one context, composed from seven independent hooks. Note that the context's API types are declared as `ReturnType<typeof useX>` — **the return shape of each hook *is* the public contract**, so changing one silently changes what every consumer destructures.
+
+The three core hooks:
 
 - `src/context/WorkoutContext.tsx` — `WorkoutProvider` wraps the app (wired in `main.tsx`) and composes `useWorkoutSession`, `useWorkoutHistory`, and `useDashboardStats` into a single context value. It also owns `saveSession`, the bridge that finalizes the active session (via `sessionAPI.finalizeSession()`) and pushes it into history (via `historyAPI.addToHistory()`). Consumers use the exported hooks (`useSession`, `useHistory`, `useStats`, `useSaveSession`) rather than the raw context.
 - `src/hooks/useWorkoutSession.ts` — the *active, in-progress* workout: starting/canceling a session, adding/removing exercises and sets, and `finalizeSession()` (validates there's at least one exercise with a valid set, cleans empty sets/names, stamps `completedAt`, and clears the active session). Persists to `localStorage` under `gym_tracker_active_session`.
 - `src/hooks/useWorkoutHistory.ts` — completed workout history: add/delete, search/filter (`filteredHistory`), and selection state for viewing a past workout. Persists to `localStorage` under `gym_tracker_history`.
 - `src/hooks/useDashboardStats.ts` — pure `useMemo` derivation (no side effects) over history: total workout count, last workout date, most popular muscle group.
 
-`App.tsx` is a two-state router with no routing library: it renders `WorkoutSessionView` if `session` (from `useSession()`) is active, otherwise `DashboardView`.
+Plus four **pure `useMemo` derivations** over `history` (no side effects, no storage of their own) — `useExerciseProgress`, `useWeeklyStreak`, `useExercisePRs`, and `useDashboardStats` — and `useFavoritesList`, a generic label-list hook instantiated twice (workout names, exercise names).
+
+The derived hooks depend on `history` being **newest-first**, and on the shared name-key convention: entities are grouped by `name.trim().toLowerCase()` while the *displayed* label is the original casing. That convention is currently duplicated inline in several files rather than centralized in `utils.ts`.
+
+`App.tsx` is a two-state router with no routing library: it renders `WorkoutSessionView` if `session` (from `useSession()`) is active, otherwise `AppShell` — which itself tab-routes between `HomeView` / `StoricoView` / `StatisticheView` with local state.
 
 ### Component layout
 

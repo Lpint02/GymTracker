@@ -1,0 +1,41 @@
+{
+  // Type CHECKING only. Vite/esbuild still does the building and strips types
+  // without consulting this file, so `noEmit` is not a limitation here — it is
+  // the whole point. Run it with `npm run typecheck`.
+  //
+  // Deliberately permissive to start (`strict: false`): the codebase was written
+  // with no checker at all, so turning everything on at once would bury real
+  // findings under hundreds of pre-existing ones. Tighten incrementally.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // `vite/client` declares the ambient modules for CSS/asset side-effect
+    // imports (main.tsx imports './index.css'), plus import.meta.env — which
+    // the Supabase client config will need.
+    "types": ["vite/client"],
+
+    "noEmit": true,
+    // main.tsx does `import App from './App.tsx'`. Vite resolves that fine; this
+    // lets tsc agree. Safe only because we never emit.
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    // esbuild compiles each file in isolation; this keeps us honest about it.
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}

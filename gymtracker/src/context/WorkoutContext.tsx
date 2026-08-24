@@ -6,7 +6,6 @@ import { useFavoritesList } from "../hooks/useFavoritesList";
 import { useExerciseProgress } from "../hooks/useExerciseProgress";
 import { useWeeklyStreak } from "../hooks/useWeeklyStreak";
 import { useExercisePRs } from "../hooks/useExercisePRs";
-import type { WorkoutSession } from "../types";
 
 const WORKOUT_FAVORITES_KEY = "gym_tracker_favorites";
 const EXERCISE_FAVORITES_KEY = "gym_tracker_favorite_exercises";
