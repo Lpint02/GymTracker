@@ -1,4 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700&display=swap');
+/* Fonts are self-hosted, not pulled from fonts.googleapis.com.
+ *
+ * The previous @import was a render-blocking cross-origin request, which meant
+ * that offline — the state this app is explicitly built for — it failed and
+ * every heading fell back to a system font and reflowed. On a design leaning
+ * this hard on a condensed face that is very visible. It also sent the user's
+ * IP to Google on every cold load, and an opaque cross-origin response cannot
+ * be precached sensibly by a service worker.
+ *
+ * Bundled locally these become part of the build, so they work offline from the
+ * very first load.
+ *
+ * Weights deliberately match what the old Google request asked for (300–700).
+ * Note that some components use font-extrabold/font-black (800/900), which were
+ * never actually loaded before either — the browser rendered them with 700.
+ * Keeping the same set means this change is infrastructure only, with no shift
+ * in how anything looks. Adding 800/900 would be a design decision, not this. */
+@import "@fontsource/barlow/latin-300.css";
+@import "@fontsource/barlow/latin-400.css";
+@import "@fontsource/barlow/latin-500.css";
+@import "@fontsource/barlow/latin-600.css";
+@import "@fontsource/barlow/latin-700.css";
+@import "@fontsource/barlow-condensed/latin-400.css";
+@import "@fontsource/barlow-condensed/latin-500.css";
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-700.css";
 @import "tailwindcss";
 
 @theme {

@@ -1,9 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover so the safe-area insets the bottom nav already uses
+         actually resolve to non-zero on notched phones in standalone mode. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>GymTracker - Registro Allenamenti</title>
+    <meta
+      name="description"
+      content="Registro allenamenti: sessioni, serie, carichi, record personali e statistiche."
+    />
+
+    <!-- Points at icon.svg, not the old favicon.svg: that one is a purple bolt
+         left over from a template, which matches neither the orange/slate theme
+         nor the dumbbell mark in the header. It was also never referenced by
+         any markup, so nothing was showing it. -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1F2937" />
+
+    <!-- iOS ignores the manifest: the installed-app name, icon, and status bar
+         all come from these meta tags instead. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="GymTracker" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>

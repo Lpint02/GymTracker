@@ -167,6 +167,26 @@ export function getDb(): Promise<GymTrackerDatabase> {
   return dbPromise;
 }
 
+/**
+ * Ask the browser to exempt our storage from automatic eviction.
+ *
+ * This matters more once the outbox exists. Safari's ITP can evict IndexedDB
+ * after roughly a week of not visiting a non-installed site, and evicting the
+ * outbox does not lose a cache — it loses workouts that were never synced.
+ *
+ * Best-effort by design: Chrome decides silently based on engagement, installed
+ * PWAs are largely exempt anyway, and a refusal is not an error. Never throws.
+ */
+export async function requestPersistentStorage(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}
+
 // ── syncMeta helpers ─────────────────────────────────────────────────────────
 
 export async function getMeta<T>(key: string): Promise<T | undefined> {
