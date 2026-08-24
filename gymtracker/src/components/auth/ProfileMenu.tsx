@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { LogOut, User as UserIcon, X, CloudOff, TriangleAlert } from "lucide-react";
+import {
+  LogOut,
+  User as UserIcon,
+  X,
+  CloudOff,
+  TriangleAlert,
+  CloudDownload,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { countPendingOperations } from "../../lib/db";
+import { countServerSessions, forceRestore } from "../../lib/sync/hydrate";
 
 /**
  * Account button in the header: who is signed in, and the way out.
@@ -12,13 +20,36 @@ export default function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [serverCount, setServerCount] = useState<number | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreNote, setRestoreNote] = useState<string | null>(null);
 
   const email = user?.email ?? "Account";
   const initial = email.charAt(0).toUpperCase();
 
   const openMenu = async () => {
     setOpen(true);
+    setRestoreNote(null);
     setPending(await countPendingOperations());
+    // Best effort: offline this simply stays unknown and the restore row hides.
+    setServerCount(await countServerSessions().catch(() => null));
+  };
+
+  const handleRestore = async () => {
+    if (!user?.id) return;
+    setRestoring(true);
+    setRestoreNote(null);
+    try {
+      const restored = await forceRestore(user.id);
+      setRestoreNote(
+        `Ripristinati ${restored} allenamenti. Ricarico la pagina…`
+      );
+      // Simplest correct way to get every hook to re-read the rebuilt store.
+      setTimeout(() => window.location.reload(), 900);
+    } catch {
+      setRestoreNote("Ripristino non riuscito. Controlla la connessione.");
+      setRestoring(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -93,6 +124,40 @@ export default function ProfileMenu() {
                     Hai {pending} {pending === 1 ? "modifica" : "modifiche"} non ancora
                     sincronizzate. Uscendo verranno perse definitivamente.
                   </span>
+                </div>
+              )}
+
+              {serverCount !== null && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <span className="text-xs font-extrabold text-muted-foreground uppercase tracking-widest">
+                    Sul tuo account
+                  </span>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {serverCount === 1
+                      ? "1 allenamento salvato nel cloud."
+                      : `${serverCount} allenamenti salvati nel cloud.`}{" "}
+                    Il ripristino sostituisce i dati di questo dispositivo con
+                    quelli del cloud.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRestore}
+                    disabled={restoring || pending > 0}
+                    title={
+                      pending > 0
+                        ? "Attendi la sincronizzazione delle modifiche in attesa"
+                        : undefined
+                    }
+                    className="w-full py-3 bg-background hover:bg-muted disabled:opacity-50 text-foreground font-bold rounded-xl text-xs border border-border transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <CloudDownload className="w-3.5 h-3.5" />
+                    {restoring ? "Ripristino…" : "Ripristina dal cloud"}
+                  </button>
+                  {restoreNote && (
+                    <p className="text-xs font-semibold text-foreground">
+                      {restoreNote}
+                    </p>
+                  )}
                 </div>
               )}
 

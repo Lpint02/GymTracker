@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { WorkoutSet } from "../../types";
 import { motion } from "motion/react";
@@ -13,6 +13,23 @@ interface ExerciseSetRowProps {
     value: number | ""
   ) => void;
   onRemove: (exerciseId: string, setId: string) => void;
+}
+
+/**
+ * Parse what the user typed into a weight.
+ *
+ * Accepts a comma as the decimal separator: the UI is Italian, and on an
+ * Italian keyboard `inputMode="decimal"` offers a comma, which parseFloat
+ * would otherwise truncate ("82,5" -> 82).
+ *
+ * Partial input ("", "82.", ",") has no numeric value yet and maps to "", the
+ * domain's empty marker.
+ */
+function parseWeight(raw: string): number | "" {
+  const normalized = raw.replace(",", ".");
+  if (normalized === "" || normalized === ".") return "";
+  const parsed = parseFloat(normalized);
+  return Number.isNaN(parsed) ? "" : parsed;
 }
 
 /**
@@ -32,6 +49,34 @@ function ExerciseSetRowInner({
       : parseFloat(String(set.weight)) || 0;
   const currentReps =
     typeof set.reps === "number" ? set.reps : parseInt(String(set.reps), 10) || 0;
+
+  /**
+   * Raw text of the weight field while the user is typing; null means "just
+   * show the stored number".
+   *
+   * A plain controlled input over `number | ""` cannot accept decimals at all.
+   * Typing "82." parses to 82, the re-render writes "82" back into the field,
+   * and the dot is swallowed before the next keystroke — so "82.5" always ended
+   * up as 825. Keeping the in-progress text separate from the parsed value is
+   * what lets an intermediate state like "82." exist.
+   */
+  const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  const [lastWeightProp, setLastWeightProp] = useState<number | "">(set.weight);
+
+  // Adjusting state during render (the documented React pattern) rather than in
+  // an effect: an effect would repaint with a stale value first, and this is
+  // the hottest render path in the app.
+  if (set.weight !== lastWeightProp) {
+    setLastWeightProp(set.weight);
+    // A change we did not cause — the +/- buttons, or a restored session — wins
+    // over whatever is half-typed.
+    if (weightDraft === null || parseWeight(weightDraft) !== set.weight) {
+      setWeightDraft(null);
+    }
+  }
+
+  const weightValue =
+    weightDraft ?? (set.weight === "" ? "" : String(set.weight));
 
   return (
     <motion.div
@@ -65,17 +110,18 @@ function ExerciseSetRowInner({
             type="text"
             inputMode="decimal"
             placeholder="0"
-            value={set.weight}
+            value={weightValue}
             onChange={(e) => {
-              const val =
-                e.target.value === "" ? "" : parseFloat(e.target.value);
-              onUpdate(
-                exerciseId,
-                set.id,
-                "weight",
-                isNaN(Number(val)) ? "" : val
-              );
+              const raw = e.target.value;
+              // Reject anything that is not a partial decimal, so a stray
+              // letter cannot silently wipe the field.
+              if (raw !== "" && !/^\d*[.,]?\d*$/.test(raw)) return;
+              setWeightDraft(raw);
+              const parsed = parseWeight(raw);
+              setLastWeightProp(parsed);
+              onUpdate(exerciseId, set.id, "weight", parsed);
             }}
+            onBlur={() => setWeightDraft(null)}
             className="w-full min-w-0 bg-transparent outline-none text-center font-heading font-black text-2xl text-foreground placeholder-muted-foreground/40"
           />
 
