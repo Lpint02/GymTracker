@@ -7,9 +7,6 @@ import { useExerciseProgress } from "../hooks/useExerciseProgress";
 import { useWeeklyStreak } from "../hooks/useWeeklyStreak";
 import { useExercisePRs } from "../hooks/useExercisePRs";
 
-const WORKOUT_FAVORITES_KEY = "gym_tracker_favorites";
-const EXERCISE_FAVORITES_KEY = "gym_tracker_favorite_exercises";
-
 // ── Types ───────────────────────────────────────────────────────────────
 
 type WorkoutSessionAPI = ReturnType<typeof useWorkoutSession>;
@@ -54,8 +51,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const sessionAPI = useWorkoutSession();
   const historyAPI = useWorkoutHistory();
   const stats = useDashboardStats(historyAPI.history);
-  const favoritesAPI = useFavoritesList(WORKOUT_FAVORITES_KEY);
-  const exerciseFavoritesAPI = useFavoritesList(EXERCISE_FAVORITES_KEY);
+  const favoritesAPI = useFavoritesList("workout");
+  const exerciseFavoritesAPI = useFavoritesList("exercise");
   const progressAPI = useExerciseProgress(historyAPI.history);
   const streakAPI = useWeeklyStreak(historyAPI.history);
   const prAPI = useExercisePRs(historyAPI.history, progressAPI.progressByExercise);
@@ -67,6 +64,20 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     }
   }, [sessionAPI, historyAPI]);
 
+  // KNOWN ISSUE — do not "fix" this by wrapping the literal below in useMemo.
+  //
+  // That memo would never hit. useWorkoutSession, useWorkoutHistory and the two
+  // useFavoritesList instances each return a fresh object literal on every
+  // render, so the dependency array changes every time regardless. (The four
+  // derivation hooks are already stable — they return useMemo results.)
+  //
+  // The consequence today: any state change re-renders every consumer, so a
+  // keystroke in the history search box re-renders the recharts SVG in
+  // ExerciseProgressSection. Making this real means memoizing the return object
+  // of each stateful hook first; a memo here without that is decoration.
+  //
+  // This is also why sync status must NOT be added to this context: it would
+  // put a value that ticks during background sync behind the same broadcast.
   return (
     <WorkoutContext.Provider
       value={{
