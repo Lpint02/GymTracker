@@ -27,15 +27,32 @@ export function useWorkoutSession() {
     }
   }, [session]);
 
-  const startSession = useCallback((date: string, muscleGroups: string) => {
-    const newSession: WorkoutSession = {
-      id: generateId(),
-      date: date || new Date().toISOString().split("T")[0],
-      muscleGroups: muscleGroups.trim() || "Allenamento Generico",
-      exercises: [],
-    };
-    setSession(newSession);
-  }, []);
+  /**
+   * Start a workout.
+   *
+   * `exerciseNames` comes from a saved routine and pre-creates those exercises,
+   * each with one empty set, in order. Nothing is prescribed beyond the names:
+   * a routine says which exercises, never how much to lift.
+   */
+  const startSession = useCallback(
+    (date: string, muscleGroups: string, exerciseNames: string[] = []) => {
+      const newSession: WorkoutSession = {
+        id: generateId(),
+        date: date || new Date().toISOString().split("T")[0],
+        muscleGroups: muscleGroups.trim() || "Allenamento Generico",
+        exercises: exerciseNames
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .map((name) => ({
+            id: generateId(),
+            name,
+            sets: [{ id: generateId(), weight: "" as const, reps: "" as const }],
+          })),
+      };
+      setSession(newSession);
+    },
+    []
+  );
 
   const cancelSession = useCallback(() => {
     setSession(null);

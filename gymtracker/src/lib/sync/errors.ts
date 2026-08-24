@@ -25,7 +25,14 @@ interface SupabaseLikeError {
 
 const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-export function classifyError(error: unknown): FailureKind {
+export function classifyError(
+  error: unknown,
+  /**
+   * What the operation was trying to do. Required because "the server already
+   * agrees" is only a meaningful reading for some failures — see the 404 case.
+   */
+  op: "upsert" | "delete"
+): FailureKind {
   // Caught before the network, so it can never be anything but permanent.
   if (error instanceof InvalidSessionError) return "permanent";
 
@@ -49,9 +56,17 @@ export function classifyError(error: unknown): FailureKind {
     return "auth";
   }
 
-  // A delete whose row is already gone, and a favorite that already exists,
-  // both mean the server is in the state we wanted. Not errors.
-  if (status === 404 || code === "23505") return "converged";
+  // A favorite that already exists means the server is in the state we wanted.
+  if (code === "23505") return "converged";
+
+  // A 404 counts as "already gone" ONLY for a delete. Treating every 404 that
+  // way is a trap: PGRST202 (missing RPC) and a wrong URL are also 404-shaped,
+  // and swallowing those would silently discard a workout that exists nowhere
+  // else. Caught in testing, when a routine push hit an RPC that had not been
+  // deployed yet — exactly the case that must NOT look like success.
+  if (status === 404 && op === "delete" && code !== "PGRST202") {
+    return "converged";
+  }
 
   if (TRANSIENT_STATUS.has(status)) return "transient";
 

@@ -3,6 +3,7 @@ import { useWorkoutSession } from "../hooks/useWorkoutSession";
 import { useWorkoutHistory } from "../hooks/useWorkoutHistory";
 import { useDashboardStats } from "../hooks/useDashboardStats";
 import { useFavoritesList } from "../hooks/useFavoritesList";
+import { useRoutines } from "../hooks/useRoutines";
 import { useExerciseProgress } from "../hooks/useExerciseProgress";
 import { useWeeklyStreak } from "../hooks/useWeeklyStreak";
 import { useExercisePRs } from "../hooks/useExercisePRs";
@@ -13,6 +14,7 @@ type WorkoutSessionAPI = ReturnType<typeof useWorkoutSession>;
 type WorkoutHistoryAPI = ReturnType<typeof useWorkoutHistory>;
 type DashboardStatsAPI = ReturnType<typeof useDashboardStats>;
 type FavoritesListAPI = ReturnType<typeof useFavoritesList>;
+type RoutinesAPI = ReturnType<typeof useRoutines>;
 type ExerciseProgressAPI = ReturnType<typeof useExerciseProgress>;
 type WeeklyStreakAPI = ReturnType<typeof useWeeklyStreak>;
 type ExercisePRsAPI = ReturnType<typeof useExercisePRs>;
@@ -24,8 +26,12 @@ interface WorkoutContextValue {
   historyAPI: WorkoutHistoryAPI;
   /** Derived dashboard statistics */
   stats: DashboardStatsAPI;
-  /** Favorite workout-name/muscle-group shortcuts */
-  favoritesAPI: FavoritesListAPI;
+  /**
+   * Saved routines: a workout name plus an ordered list of exercise names.
+   * Replaced the workout-name favorites list — a routine with no exercises
+   * behaves exactly like the old name pill, so there is one list, not two.
+   */
+  routinesAPI: RoutinesAPI;
   /** Favorite exercise-name shortcuts */
   exerciseFavoritesAPI: FavoritesListAPI;
   /** Derived per-exercise progress-over-time series */
@@ -51,7 +57,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const sessionAPI = useWorkoutSession();
   const historyAPI = useWorkoutHistory();
   const stats = useDashboardStats(historyAPI.history);
-  const favoritesAPI = useFavoritesList("workout");
+  const routinesAPI = useRoutines();
   const exerciseFavoritesAPI = useFavoritesList("exercise");
   const progressAPI = useExerciseProgress(historyAPI.history);
   const streakAPI = useWeeklyStreak(historyAPI.history);
@@ -84,7 +90,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         sessionAPI,
         historyAPI,
         stats,
-        favoritesAPI,
+        routinesAPI,
         exerciseFavoritesAPI,
         progressAPI,
         streakAPI,
@@ -122,9 +128,9 @@ export function useStats() {
   return useWorkoutContext().stats;
 }
 
-/** Access favorite workout-name/muscle-group shortcuts */
-export function useFavorites() {
-  return useWorkoutContext().favoritesAPI;
+/** Access saved routines (workout name + ordered exercise names) */
+export function useRoutinesList() {
+  return useWorkoutContext().routinesAPI;
 }
 
 /** Access favorite exercise-name shortcuts */

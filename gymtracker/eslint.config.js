@@ -35,15 +35,6 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    rules: {
-      // Pre-existing finding, surfaced the moment .tsx became lintable:
-      // SetupSessionModal resets its form fields from an effect. It's a real
-      // smell (an extra render pass after paint), but it lives outside the
-      // scope of the store/sync work and fixing it here would churn an
-      // unrelated file. Kept visible as a warning; scheduled for the cleanup
-      // phase alongside the name-normalization centralization.
-      'react-hooks/set-state-in-effect': 'warn',
-    },
   },
   // WorkoutContext deliberately exports one provider component alongside its
   // nine consumer hooks — that co-location IS the architecture here, and

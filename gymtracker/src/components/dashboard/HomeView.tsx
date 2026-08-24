@@ -10,8 +10,12 @@ export default function HomeView() {
   const { startSession } = useSession();
   const [isSetupOpen, setIsSetupOpen] = useState(false);
 
-  const handleStartSession = (date: string, muscleGroups: string) => {
-    startSession(date, muscleGroups);
+  const handleStartSession = (
+    date: string,
+    muscleGroups: string,
+    exerciseNames: string[]
+  ) => {
+    startSession(date, muscleGroups, exerciseNames);
     setIsSetupOpen(false);
   };
 

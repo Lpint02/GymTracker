@@ -83,9 +83,29 @@ async function executeOperation(record: OutboxRecord): Promise<void> {
     return;
   }
 
-  // Routines get their own operations when the routine UI lands. Reaching here
-  // means the queue holds something this build does not understand; parking it
-  // is safer than guessing.
+  if (record.entity === "routine") {
+    if (record.op === "upsert") {
+      // Same shape as sessions, for the same reason: a routine is a row plus
+      // N ordered items, and separate calls would be separate transactions.
+      const { error } = await supabase.rpc("sync_upsert_routine", {
+        p_routine: record.payload,
+      });
+      if (error) throw error;
+      return;
+    }
+
+    // Cascades to routine_favorite_items.
+    const { error } = await supabase
+      .from("routine_favorites")
+      .delete()
+      .eq("id", record.entityId);
+    if (error) throw error;
+    return;
+  }
+
+  // Reaching here means the queue holds something this build does not
+  // understand — an operation written by a newer version, say. Parking it is
+  // safer than guessing at what it meant.
   throw Object.assign(
     new Error(`Operazione sconosciuta: ${record.entity}/${record.op}`),
     { code: "UNSUPPORTED" }
@@ -133,7 +153,7 @@ async function drain(): Promise<void> {
       await removeOperation(record.seq!);
       continue;
     } catch (error) {
-      const kind = classifyError(error);
+      const kind = classifyError(error, record.op);
 
       if (kind === "converged") {
         // The server already agrees — a delete whose row is gone, or a favorite

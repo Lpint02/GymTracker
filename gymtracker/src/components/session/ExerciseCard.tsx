@@ -1,8 +1,11 @@
 import { Plus, Trash2, Star, X } from "lucide-react";
 import { Exercise } from "../../types";
 import ExerciseSetRow from "./ExerciseSetRow";
-import { useExerciseFavorites } from "../../context/WorkoutContext";
+import { useMemo } from "react";
+import { useExerciseFavorites, useProgress } from "../../context/WorkoutContext";
 import { motion, AnimatePresence } from "motion/react";
+import ExerciseNameInput from "./ExerciseNameInput";
+import { normalizeKey } from "../../lib/utils";
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -30,6 +33,18 @@ export default function ExerciseCard({
 }: ExerciseCardProps) {
   const { favorites, isFavorite, toggleFavorite, removeFavorite } =
     useExerciseFavorites();
+  const { exerciseNames } = useProgress();
+
+  // Names actually performed, plus ones saved as favorites but never logged
+  // with a weight (which is what keeps them out of exerciseNames).
+  const suggestions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const name of [...exerciseNames, ...favorites.map((f) => f.label)]) {
+      const key = normalizeKey(name);
+      if (key && !seen.has(key)) seen.set(key, name);
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }, [exerciseNames, favorites]);
 
   return (
     <motion.div
@@ -45,12 +60,12 @@ export default function ExerciseCard({
         <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 text-primary font-heading font-bold text-xs shrink-0">
           {index + 1}
         </span>
-        <input
-          type="text"
-          placeholder="Nome Esercizio (es. Panca Piana, Squat...)"
+        <ExerciseNameInput
           value={exercise.name}
-          onChange={(e) => onUpdateName(exercise.id, e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-base sm:text-lg font-heading font-extrabold text-foreground placeholder-muted-foreground/50 border-b border-transparent hover:border-border focus:border-primary focus:outline-none pb-1 transition-colors"
+          onChange={(name) => onUpdateName(exercise.id, name)}
+          suggestions={suggestions}
+          placeholder="Nome Esercizio (es. Panca Piana, Squat...)"
+          className="w-full min-w-0 bg-transparent text-base sm:text-lg font-heading font-extrabold text-foreground placeholder-muted-foreground/50 border-b border-transparent hover:border-border focus:border-primary focus:outline-none pb-1 transition-colors"
         />
 
         {/* Favorite toggle */}
