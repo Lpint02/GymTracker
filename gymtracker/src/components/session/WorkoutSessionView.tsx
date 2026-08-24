@@ -6,6 +6,7 @@ import ExerciseCard from "./ExerciseCard";
 import SessionFooter from "./SessionFooter";
 import DiscardConfirmModal from "../shared/DiscardConfirmModal";
 import { AnimatePresence } from "motion/react";
+import { hasLoggedWork } from "../../lib/session";
 
 /**
  * Orchestrator component for the active workout session.
@@ -29,11 +30,10 @@ export default function WorkoutSessionView() {
 
   if (!session) return null;
 
-  // Check if session has at least one set with real weight/reps data,
-  // matching the validation finalizeSession() performs on save.
-  const isSessionEmpty = session.exercises.every(
-    (ex) => !ex.sets.some((s) => s.weight !== "" || s.reps !== "")
-  );
+  // Shares its definition with finalizeSession rather than restating it, so
+  // the button cannot end up enabled for a session that will not save — or
+  // disabled for one that would.
+  const isSessionEmpty = !hasLoggedWork(session);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans select-none antialiased">

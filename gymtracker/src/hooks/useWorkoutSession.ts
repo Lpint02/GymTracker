@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { WorkoutSession, Exercise, WorkoutSet } from "../types";
 import { generateId } from "../lib/utils";
+import { cleanSessionExercises } from "../lib/session";
 
 const STORAGE_KEY = "gym_tracker_active_session";
 
@@ -155,23 +156,22 @@ export function useWorkoutSession() {
 
   /**
    * Validates, cleans, and finalizes the session for saving.
-   * Returns the completed session or null if validation fails.
+   * Returns the completed session, or null if there is nothing worth saving.
+   *
+   * Returning null is silent by design. This hook is a state transition and has
+   * no business talking to the user — and it has nothing to add anyway: the
+   * save button is disabled under exactly this condition (both now ask
+   * `hasLoggedWork`), and the footer already explains why, permanently, right
+   * under the button. The alert() that used to live here was a second copy of
+   * that same sentence, reachable only if something bypassed the button, and it
+   * blocked the main thread to say it — which would have frozen the rest timer.
    */
   const finalizeSession = useCallback((): WorkoutSession | null => {
     if (!session) return null;
 
-    const cleanedExercises = session.exercises
-      .map((ex) => ({
-        ...ex,
-        name: ex.name.trim() || "Esercizio Senza Nome",
-        sets: ex.sets.filter((set) => set.weight !== "" || set.reps !== ""),
-      }))
-      .filter((ex) => ex.sets.length > 0);
+    const cleanedExercises = cleanSessionExercises(session);
 
     if (cleanedExercises.length === 0) {
-      alert(
-        "Aggiungi almeno un esercizio con una serie valida (peso o ripetizioni) per salvare l'allenamento."
-      );
       return null;
     }
 
