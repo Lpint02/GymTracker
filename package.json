@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "dev": "npm --prefix gymtracker run dev",
+    "dev:host": "npm --prefix gymtracker run dev:host",
+    "build": "npm --prefix gymtracker run build",
+    "preview": "npm --prefix gymtracker run preview"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.17",
+    "tailwindcss": "^4.3.2"
+  }
+}
