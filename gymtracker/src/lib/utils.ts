@@ -4,11 +4,44 @@
  */
 
 /**
- * Generate a short random alphanumeric ID.
- * Previously duplicated as a lambda inside App.tsx.
+ * Generate a v4 UUID for a new entity (session, exercise, set, favorite).
+ *
+ * IDs are generated on the client, never by the server, because the app writes
+ * offline and must know an entity's id before it has ever seen the network.
+ * That is also what makes sync retries safe: every push is an upsert keyed by
+ * this id, so replaying the same operation converges on the same row instead of
+ * creating a duplicate.
+ *
+ * This replaced `Math.random().toString(36).substring(2, 9)` — 7 base-36 chars,
+ * ~78 billion values. Over years of logging, a user generates on the order of
+ * 10^5 set ids, which by the birthday bound is a percent-level chance of a
+ * collision — and a collision here means one set silently overwriting another
+ * on upsert. It was also not a UUID, which a Postgres `uuid` column rejects.
+ *
+ * The `getRandomValues` fallback is not theoretical: `crypto.randomUUID` is
+ * unavailable in insecure contexts, and `npm run dev:host` serves the app over
+ * plain http://<lan-ip> for phone testing. `getRandomValues` is available there.
  */
-export const generateId = (): string =>
-  Math.random().toString(36).substring(2, 9);
+export const generateId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10xx
+
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+
+  return (
+    hex.slice(0, 8) + "-" +
+    hex.slice(8, 12) + "-" +
+    hex.slice(12, 16) + "-" +
+    hex.slice(16, 20) + "-" +
+    hex.slice(20)
+  );
+};
 
 /**
  * Return today's date in ISO format (YYYY-MM-DD).
