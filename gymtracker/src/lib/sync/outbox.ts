@@ -124,14 +124,35 @@ export async function updateOperation(record: OutboxRecord): Promise<void> {
   await tx.done;
 }
 
-/** Put every parked operation back in line, with its attempt count reset. */
+/**
+ * Put every parked operation back in line, with its attempt count reset.
+ *
+ * A parked row that a newer row for the same entity has superseded is dropped
+ * instead: replaying it would push a stale snapshot over the newer one. Enqueue
+ * already prevents that shape, but queues written before it did can still hold
+ * it. Returns how many operations were re-queued.
+ */
 export async function retryFailedOperations(): Promise<number> {
   const db = await getDb();
   const tx = db.transaction("outbox", "readwrite");
   const store = tx.objectStore("outbox");
-  const failed = await store.index("by-status").getAll("failed");
+  const all = await store.getAll();
 
-  for (const row of failed) {
+  const newestSeq = new Map<string, number>();
+  for (const row of all) {
+    const key = `${row.entity}/${row.entityId}`;
+    newestSeq.set(key, Math.max(newestSeq.get(key) ?? -Infinity, row.seq!));
+  }
+
+  let requeued = 0;
+  for (const row of all) {
+    if (row.status !== "failed") continue;
+
+    if (row.seq! < newestSeq.get(`${row.entity}/${row.entityId}`)!) {
+      await store.delete(row.seq!);
+      continue;
+    }
+
     await store.put({
       ...row,
       status: "pending" as const,
@@ -139,10 +160,11 @@ export async function retryFailedOperations(): Promise<number> {
       nextAttemptAt: 0,
       lastError: null,
     });
+    requeued++;
   }
 
   await tx.done;
-  return failed.length;
+  return requeued;
 }
 
 /**
