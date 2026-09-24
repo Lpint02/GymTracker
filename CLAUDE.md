@@ -78,6 +78,8 @@ Local-first. Writes land in IndexedDB immediately; the network happens afterward
 
 Payloads are **full snapshots, never deltas**. Combined with upsert-by-primary-key, replaying converges on the same row — at-least-once becomes effectively-once with no server-side dedupe. This is why ids are client-generated UUIDs (`generateId`).
 
+The same fact drives coalescing: **a newly queued operation supersedes every queued operation for the same entity, parked ones included** (`src/lib/sync/outbox.ts`). The newest snapshot already says everything an older one did, and a parked stale upsert left behind would be replayed by "Riprova" after the newer one synced — overwriting an edit or resurrecting a deleted workout. That is not dropping data: the data lives in its own store, and only an obsolete instruction goes. For the same reason `updateOperation` never recreates a row that was superseded while the drainer held it.
+
 - `src/lib/sync/engine.ts` — the drainer. Triggers: end of workout, boot, `visibilitychange` (the primary mobile signal), `online`. `isFlushing` and the auth-refresh guard are module-scoped and **not optional** (StrictMode double-invokes; a call-scoped refresh guard loops forever).
 - `src/lib/sync/errors.ts` — classification is what keeps the queue healthy: transient (backoff), auth (refresh once, no attempt burned), converged (server already agrees), permanent (park, never retry, **never drop**).
 - `src/lib/sync/mappers.ts` — **the single place** `"" ↔ NULL` is translated, plus `assertValidSession`, which rejects malformed data before enqueue rather than after the network. Do not inline `=== ""` checks elsewhere.
@@ -128,5 +130,5 @@ Tailwind CSS v4 via the `@tailwindcss/vite` plugin (no `tailwind.config.js` — 
 
 - **iOS**: an installed standalone PWA launching Google OAuth punts to the system browser, and the redirect back is unreliable. Email/password is the dependable path there.
 - **Safari** can evict IndexedDB after ~a week of non-use on non-installed sites, which would lose unsynced workouts, not just a cache. Hence `navigator.storage.persist()` at boot, and hence shipping the manifest early.
-- **`alert()` in `finalizeSession`** blocks the thread and is unusable in an installed PWA. Route new messaging through the UI instead; this one is still outstanding.
+- **No `alert()`/`confirm()`**: they block the main thread (freezing timers) and are unusable in an installed PWA. Route messaging through the UI, as `src/lib/store/errors.ts` does.
 - Three transitive **dev-only** npm advisories (`postcss`, `nanoid`, `brace-expansion`) are pre-existing and build-time only.
