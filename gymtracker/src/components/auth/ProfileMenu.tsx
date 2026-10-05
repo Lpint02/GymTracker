@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LogOut,
@@ -82,6 +83,9 @@ export default function ProfileMenu() {
         </button>
       </div>
 
+      {/* Portaled for the same reason as SyncBadge: the header's backdrop-filter
+          would otherwise clip this `fixed` overlay to the header's height. */}
+      {createPortal(
       <AnimatePresence>
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -178,7 +182,9 @@ export default function ProfileMenu() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </>
   );
 }

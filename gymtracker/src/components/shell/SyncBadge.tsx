@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Cloud,
@@ -88,6 +89,10 @@ export default function SyncBadge() {
         </span>
       </button>
 
+      {/* Portaled out of the header: its backdrop-filter makes it the containing
+          block for `fixed` descendants, which squeezed this overlay into the
+          header's ~80px and pushed "Elimina" off the top of the screen. */}
+      {createPortal(
       <AnimatePresence>
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -186,7 +191,9 @@ export default function SyncBadge() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </>
   );
 }
