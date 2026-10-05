@@ -1,5 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Dumbbell, Mail, Lock, LoaderCircle, MailCheck } from "lucide-react";
+import {
+  Dumbbell,
+  Mail,
+  Lock,
+  LoaderCircle,
+  MailCheck,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 type Mode = "login" | "signup";
@@ -16,6 +24,7 @@ export default function AuthView() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
@@ -139,17 +148,58 @@ export default function AuthView() {
     );
   }
 
+  const isSignup = mode === "signup";
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+  };
+
   return (
     <Shell>
-      <div className="flex flex-col items-center text-center gap-2 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary p-[1px]">
+      <div className="flex items-center justify-center gap-2.5 mb-5">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary p-[1px]">
           <div className="w-full h-full bg-card rounded-[11px] flex items-center justify-center">
-            <Dumbbell className="w-6 h-6 text-primary transform -rotate-45" />
+            <Dumbbell className="w-4.5 h-4.5 text-primary transform -rotate-45" />
           </div>
         </div>
-        <h1 className="text-xl font-heading font-black text-foreground">GymTracker</h1>
-        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-          {mode === "login" ? "Accedi al tuo registro" : "Crea il tuo account"}
+        <span className="text-lg font-heading font-black text-foreground">GymTracker</span>
+      </div>
+
+      {/* The two modes used to differ only by a subtitle and a button label, so
+          it was easy not to notice which one you were in. The switch keeps the
+          current mode visible at all times and is one tap to change. */}
+      <div
+        role="tablist"
+        aria-label="Accesso o registrazione"
+        className="grid grid-cols-2 gap-1 p-1 mb-6 bg-background border border-border rounded-xl"
+      >
+        {(["login", "signup"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => switchMode(m)}
+            className={`py-2.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors cursor-pointer ${
+              mode === m
+                ? "bg-primary text-on-primary shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m === "login" ? "Accedi" : "Registrati"}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-5">
+        <h1 className="text-xl font-heading font-black text-foreground">
+          {isSignup ? "Crea il tuo account" : "Accedi al tuo registro"}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isSignup
+            ? "Inizia a registrare i tuoi allenamenti."
+            : "Riprendi da dove avevi lasciato."}
         </p>
       </div>
 
@@ -166,18 +216,37 @@ export default function AuthView() {
           />
         </Field>
 
-        <Field icon={<Lock className="w-4 h-4" />}>
-          <input
-            type="password"
-            required
-            minLength={6}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent outline-none text-sm font-semibold text-foreground placeholder-muted-foreground/50"
-          />
-        </Field>
+        <div className="space-y-1.5">
+          <Field icon={<Lock className="w-4 h-4" />}>
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={6}
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              placeholder={isSignup ? "Scegli una password" : "Password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-describedby={isSignup ? "password-hint" : undefined}
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm font-semibold text-foreground placeholder-muted-foreground/50"
+            />
+            {/* Seeing what you typed is the cheap fix for a mistyped password,
+                and on a phone keyboard it matters more than a confirm field. */}
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+              aria-pressed={showPassword}
+              className="shrink-0 -my-1 -mr-1 p-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </Field>
+          {isSignup && (
+            <p id="password-hint" className="px-1 text-xs text-muted-foreground">
+              Almeno 6 caratteri.
+            </p>
+          )}
+        </div>
 
         {error && <ErrorNote>{error}</ErrorNote>}
 
@@ -187,7 +256,7 @@ export default function AuthView() {
           className="w-full py-3.5 bg-primary hover:bg-secondary disabled:opacity-60 text-on-primary font-heading font-black rounded-xl text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
         >
           {busy && <LoaderCircle className="w-4 h-4 animate-spin" />}
-          {mode === "login" ? "Accedi" : "Registrati"}
+          {isSignup ? "Crea account" : "Accedi"}
         </button>
       </form>
 
@@ -204,22 +273,8 @@ export default function AuthView() {
         className="w-full py-3.5 bg-background hover:bg-muted disabled:opacity-60 text-foreground font-bold rounded-xl text-xs border border-border transition-colors cursor-pointer flex items-center justify-center gap-2.5"
       >
         <GoogleMark />
-        Continua con Google
+        {isSignup ? "Registrati con Google" : "Continua con Google"}
       </button>
-
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        {mode === "login" ? "Non hai un account? " : "Hai già un account? "}
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "login" ? "signup" : "login");
-            setError(null);
-          }}
-          className="font-bold text-primary hover:text-secondary cursor-pointer"
-        >
-          {mode === "login" ? "Registrati" : "Accedi"}
-        </button>
-      </p>
     </Shell>
   );
 }
