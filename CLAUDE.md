@@ -128,5 +128,5 @@ Tailwind CSS v4 via the `@tailwindcss/vite` plugin (no `tailwind.config.js` — 
 
 - **iOS**: an installed standalone PWA launching Google OAuth punts to the system browser, and the redirect back is unreliable. Email/password is the dependable path there.
 - **Safari** can evict IndexedDB after ~a week of non-use on non-installed sites, which would lose unsynced workouts, not just a cache. Hence `navigator.storage.persist()` at boot, and hence shipping the manifest early.
-- **`alert()` in `finalizeSession`** blocks the thread and is unusable in an installed PWA. Route new messaging through the UI instead; this one is still outstanding.
+- **No `alert()` / `confirm()` / `prompt()`.** They block the main thread (no render, no sync, and they would freeze a rest timer) and show as unstyled system dialogs inside an installed PWA. Route messaging through the UI. The last one, in `finalizeSession`, was removed in `5b4651f`; the "can this session be saved" rule now lives once, in `hasLoggedWork` (`src/lib/session.ts`).
 - Three transitive **dev-only** npm advisories (`postcss`, `nanoid`, `brace-expansion`) are pre-existing and build-time only.
