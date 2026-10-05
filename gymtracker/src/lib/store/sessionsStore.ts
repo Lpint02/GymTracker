@@ -45,7 +45,7 @@ export async function deleteSession(id: string): Promise<void> {
   const tx = db.transaction(["sessions", "outbox"], "readwrite");
 
   await tx.objectStore("sessions").delete(id);
-  // Coalescing inside enqueue drops any pending upsert for this id first, so we
+  // Enqueueing supersedes any queued upsert for this id first, so we
   // never push a workout we have already deleted and then delete it again.
   await enqueueInTransaction(tx.objectStore("outbox"), {
     entity: "session",
