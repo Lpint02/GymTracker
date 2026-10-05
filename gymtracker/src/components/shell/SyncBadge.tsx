@@ -11,6 +11,7 @@ import {
   HardDriveDownload,
 } from "lucide-react";
 import { useSyncStatus } from "../../hooks/useSyncStatus";
+import { getSnapshot } from "../../lib/sync/syncStore";
 
 /**
  * Whether the user's data is actually safe.
@@ -37,6 +38,16 @@ export default function SyncBadge() {
   } = useSyncStatus();
 
   const [open, setOpen] = useState(false);
+
+  // Once nothing is parked, the panel has nothing left to offer.
+  const handleDiscard = async (seq: number) => {
+    await discard(seq);
+    if (failedOperations.length <= 1 && !storageError) setOpen(false);
+  };
+  const handleRetry = async () => {
+    await retryFailed();
+    if (getSnapshot().failedCount === 0 && !storageError) setOpen(false);
+  };
 
   useEffect(() => {
     if (open) void refreshFailedList();
@@ -165,7 +176,7 @@ export default function SyncBadge() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => void discard(op.seq!)}
+                        onClick={() => void handleDiscard(op.seq!)}
                         className="text-xs font-bold text-destructive hover:underline shrink-0 cursor-pointer"
                       >
                         Elimina
@@ -177,7 +188,7 @@ export default function SyncBadge() {
 
               <button
                 type="button"
-                onClick={() => void retryFailed()}
+                onClick={() => void handleRetry()}
                 className="w-full py-3.5 bg-primary hover:bg-secondary text-on-primary font-heading font-black rounded-xl text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-3.5 h-3.5" />

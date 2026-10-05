@@ -19,21 +19,28 @@ import { requestFlush, publishCounts } from "../lib/sync/engine";
 export function useSyncStatus() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  const retryFailed = useCallback(async () => {
-    await retryFailedOperations();
-    await publishCounts();
-    await requestFlush();
-  }, []);
-
-  const discard = useCallback(async (seq: number) => {
-    await discardOperation(seq);
-    await publishCounts();
-  }, []);
-
   const refreshFailedList = useCallback(async () => {
     const all = await getAllOperations();
     setSyncState({ failedOperations: all.filter((r) => r.status === "failed") });
   }, []);
+
+  // Both actions change the queue, so both must re-derive the state AND the
+  // list from it. Counts alone are not enough: after discarding the last parked
+  // operation the badge read "Sincronizzazione bloccata (0)" and the panel kept
+  // showing the row that was gone. requestFlush recomputes state from the
+  // queue even when there is nothing pending to send.
+  const retryFailed = useCallback(async () => {
+    await retryFailedOperations();
+    await publishCounts();
+    await requestFlush();
+    await refreshFailedList();
+  }, [refreshFailedList]);
+
+  const discard = useCallback(async (seq: number) => {
+    await discardOperation(seq);
+    await requestFlush();
+    await refreshFailedList();
+  }, [refreshFailedList]);
 
   return { ...snapshot, retryFailed, discard, refreshFailedList, requestFlush };
 }
