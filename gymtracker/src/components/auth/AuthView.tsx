@@ -26,7 +26,20 @@ export default function AuthView() {
     if (m.includes("email not confirmed")) return "Devi prima confermare l'email. Controlla la posta.";
     if (m.includes("user already registered")) return "Esiste già un account con questa email.";
     if (m.includes("password should be at least")) return "La password deve avere almeno 6 caratteri.";
-    if (m.includes("failed to fetch")) return "Nessuna connessione. Riprova quando sei online.";
+    // "The request never reached a server" covers two different situations, and
+    // the user can only act on the right one if we tell them which. With the
+    // browser online, the server itself is down or unreachable (a paused
+    // Supabase project looks exactly like this) — not the user's connection.
+    // Chrome says "Failed to fetch", Safari "Load failed", Firefox "NetworkError".
+    if (
+      m.includes("failed to fetch") ||
+      m.includes("load failed") ||
+      m.includes("networkerror")
+    ) {
+      return navigator.onLine
+        ? "Il server non risponde. Riprova tra poco."
+        : "Nessuna connessione. Riprova quando sei online.";
+    }
     return message;
   };
 
